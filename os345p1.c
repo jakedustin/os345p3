@@ -110,11 +110,37 @@ int P1_main(int argc, char *argv[])
                 myArgv[i] = 0;
             }
 
-            // parse input string
-            while ((sp = strchr(sp, ' '))) {
-                // TODO: parse quoted strings
-                *sp++ = 0;
+            sp = strchr(sp, ' ');
+            *sp++ = 0;
+            char *spCopy = sp;
+
+            while (sp) {
+                if (spCopy[0] == '"') {
+                    do {
+                        // break for when there aren't enough quotes
+                        if (spCopy[0] == '\0') {
+                            printf("\nInvalid quotes on buffer.");
+                            break;
+                        }
+                        spCopy += sizeof(char);
+                    } while (spCopy[0] != '"');
+
+                    // break for when there aren't enough quotes
+                    if (spCopy[0] == '\0') {
+                        break;
+                    }
+                    spCopy += sizeof(char);
+                } else {
+                    spCopy = strchr(spCopy, ' ');
+                }
+
+                if (spCopy == NULL) {
+                    break;
+                }
+
+                *spCopy++ = 0;
                 myArgv[newArgc++] = sp;
+                sp = spCopy;
             }
 
             // newArgv = myArgv;
@@ -122,6 +148,12 @@ int P1_main(int argc, char *argv[])
             for (int i = 0; i < newArgc; ++i) {
                 size_t currentStringLength = strlen(myArgv[i]);
                 newArgv[i] = (char*)(malloc(currentStringLength + 1));
+
+                if (myArgv[i][0] != '"') {
+                    for (int j = 0; j < strlen(myArgv[i]); ++j) {
+                        myArgv[i][j] = tolower(myArgv[i][j]);
+                    }
+                }
                 strcpy(newArgv[i], myArgv[i]);
             }
         }
@@ -280,11 +312,14 @@ int P1_add(int argc, char *argv[])
 	{
 		for (int i = 1; i < argc; ++i)
 		{
-			returnVal += strtol(argv[i], NULL, 0);
+            if ((int) argv[i] != '&') {
+                returnVal += strtol(argv[i], NULL, 0);
+            }
 		}
 	}
+    printf("\nadd returned %d", returnVal);
 
-	return returnVal;
+	return 0;
 }
 
 int P1_args(int argc, char *argv[]) {

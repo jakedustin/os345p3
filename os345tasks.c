@@ -73,6 +73,7 @@ int createTask(char* name,						// task name
 			tcb[tid].argc = argc;			// argument count
 
 			// ?? malloc new argv parameters
+            // TODO: this one
 			tcb[tid].argv = argv;			// argument pointers
 
 			tcb[tid].event = 0;				// suspend semaphore
@@ -173,7 +174,8 @@ int sysKillTask(int taskId)
 		}
 	}
 
-	// ?? delete task from system queues
+    // TODO: free up system resources from before
+	// ?? delete task from system queues (proj2)
 
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;
