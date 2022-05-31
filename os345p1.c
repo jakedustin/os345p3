@@ -35,23 +35,35 @@ extern int curTask;
 // ***********************************************************************
 // project 1 global variables
 //
-extern long swapCount;			 // number of scheduler cycles
-extern char inBuffer[];			 // character input buffer
-extern Semaphore *inBufferReady; // input buffer ready semaphore
-extern bool diskMounted;		 // disk has been mounted
-extern char dirPath[];			 // directory path
-Command **commands;				 // shell commands
+extern long swapCount;              // number of scheduler cycles
+extern char inBuffer[];             // character input buffer
+extern Semaphore *inBufferReady;    // input buffer ready semaphore
+extern bool diskMounted;            // disk has been mounted
+extern char dirPath[];              // directory path
+Command **commands;                 // shell commands
 
 // ***********************************************************************
 // project 1 prototypes
 Command **P1_init(void);
+
 Command *newCommand(char *, char *, int (*func)(int, char **), char *);
 
 bool checkFinalArgForAmpersand();
 
-void mySigIntHandler(void)
-{
-	printf("Hellomynameisinigomontoyayoukilledmyfatherpreparetodie");
+void mySigIntHandler(void) {
+    sigSignal(-1, mySIGTERM);
+}
+
+void mySigContHandler(void) {
+    return;
+}
+
+void mySigTermHandler(void) {
+    killTask(curTask);
+}
+
+void mySigTstpHandler(void) {
+    sigSignal(-1, mySIGSTOP);
 }
 
 // ***********************************************************************
@@ -67,35 +79,37 @@ void mySigIntHandler(void)
 // 6. If found, perform a function variable call passing argc/argv variables.
 // 7. Supports background execution of non-intrinsic commands.
 //
-int P1_main(int argc, char *argv[])
-{
-	int i, found;
-	int newArgc;	// # of arguments
-	char **newArgv; // pointers to arguments
+int P1_main(int argc, char *argv[]) {
+    int i, found;
+    int newArgc;    // # of arguments
+    char **newArgv; // pointers to arguments
 
-	// initialize shell commands
-	commands = P1_init(); // init shell commands
+    // initialize shell commands
+    commands = P1_init(); // init shell commands
 
-	sigAction(mySigIntHandler, mySIGINT);
+    sigAction(mySigIntHandler, mySIGINT);
+    sigAction(mySigContHandler, mySIGCONT);
+    sigAction(mySigTermHandler, mySIGTERM);
+    sigAction(mySigTstpHandler, mySIGTSTP);
+    // create handlers for all four signals
 
     {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     }
-	while (1)
-	{
-		// output prompt
-		if (diskMounted)
-			printf("\n%s>>", dirPath);
-		else
-			printf("\n%ld>>", swapCount);
+    while (1) {
+        // output prompt
+        if (diskMounted)
+            printf("\n%s>>", dirPath);
+        else
+            printf("\n%ld>>", swapCount);
 
-		SEM_WAIT(inBufferReady); // wait for input buffer semaphore
-		if (!inBuffer[0])
-			continue; // ignore blank lines
-		// printf("%s", inBuffer);
+        SEM_WAIT(inBufferReady); // wait for input buffer semaphore
+        if (!inBuffer[0])
+            continue; // ignore blank lines
+        // printf("%s", inBuffer);
 
-		SWAP // do context switch
+        SWAP // do context switch
 
         // ?? vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         // ?? parse command line into argc, argv[] variables
@@ -104,75 +118,75 @@ int P1_main(int argc, char *argv[])
             static char *sp, *myArgv[MAX_ARGS];
 
             // init arguments
-            newArgc = 1;
+            newArgc = 0;
             myArgv[0] = sp = inBuffer;                // point to input string
-            for (i=1; i<MAX_ARGS; i++) {
+            for (i = 1; i < MAX_ARGS; i++) {
                 myArgv[i] = 0;
             }
 
-            sp = strchr(sp, ' ');
-            *sp++ = 0;
-            char *spCopy = sp;
+            if (strchr(sp, ' ')) {
+                char *spCopy = sp;
 
-            while (sp) {
-                if (spCopy[0] == '"') {
-                    do {
+                while (sp) {
+                    if (spCopy[0] == '"') {
+                        do {
+                            // break for when there aren't enough quotes
+                            if (spCopy[0] == '\0') {
+                                printf("\nInvalid quotes on buffer.");
+                                break;
+                            }
+                            spCopy += sizeof(char);
+                        } while (spCopy[0] != '"');
+
                         // break for when there aren't enough quotes
                         if (spCopy[0] == '\0') {
-                            printf("\nInvalid quotes on buffer.");
                             break;
                         }
                         spCopy += sizeof(char);
-                    } while (spCopy[0] != '"');
+                    } else {
+                        spCopy = strchr(spCopy, ' ');
+                    }
 
-                    // break for when there aren't enough quotes
-                    if (spCopy[0] == '\0') {
+                    if (spCopy == NULL) {
+                        myArgv[newArgc++] = sp;
                         break;
                     }
-                    spCopy += sizeof(char);
-                } else {
-                    spCopy = strchr(spCopy, ' ');
-                }
 
-                if (spCopy == NULL) {
-                    break;
+                    *spCopy++ = 0;
+                    myArgv[newArgc++] = sp;
+                    sp = spCopy;
                 }
-
-                *spCopy++ = 0;
-                myArgv[newArgc++] = sp;
-                sp = spCopy;
+            } else {
+                sp = strchr(sp, '\0');
+                *sp++ = 0;
+                myArgv[newArgc] = sp;
             }
 
             // newArgv = myArgv;
-            newArgv = (char**)(malloc(newArgc * sizeof(char*)));
+            newArgv = (char **) (malloc(newArgc * sizeof(char *)));
             for (int i = 0; i < newArgc; ++i) {
-                size_t currentStringLength = strlen(myArgv[i]);
-                newArgv[i] = (char*)(malloc(currentStringLength + 1));
 
-                if (myArgv[i][0] != '"') {
-                    for (int j = 0; j < strlen(myArgv[i]); ++j) {
+                size_t currentStringLength = strlen(myArgv[i]);
+                newArgv[i] = (char *) (malloc(currentStringLength + 1));
+
+                if (myArgv[i][0] != '"')
+                    for (int j = 0; j < strlen(myArgv[i]); ++j)
                         myArgv[i][j] = tolower(myArgv[i][j]);
-                    }
-                }
                 strcpy(newArgv[i], myArgv[i]);
             }
         }
-		// ?? ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        // ?? ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		// look for command
-		for (found = i = 0; i < NUM_COMMANDS; i++)
-		{
-			if (!strcmp(newArgv[0], commands[i]->command) ||
-				!strcmp(newArgv[0], commands[i]->shortcut))
-			{
+        // look for command
+        for (found = i = 0; i < NUM_COMMANDS; i++) {
+            if (!strcmp(newArgv[0], commands[i]->command) ||
+                !strcmp(newArgv[0], commands[i]->shortcut)) {
 
                 // check for ampersand at end of input line
                 if (checkFinalArgForAmpersand(newArgv[newArgc - 1])) {
-                    // TODO: implement background task
                     printf("\nfinal arg contained ampersand");
                     createTask(commands[i]->command, commands[i]->func, LOW_PRIORITY, newArgc, newArgv);
-                }
-                else {
+                } else {
                     // command found, make implicit call thru function pointer
                     int retValue = (*commands[i]->func)(newArgc, newArgv);
                     if (retValue)
@@ -180,25 +194,23 @@ int P1_main(int argc, char *argv[])
                 }
                 found = TRUE;
                 break;
-			}
-		}
-		if (!found)
-		{
-			printf("\nInvalid command!");
-		}
+            }
+        }
+        if (!found) {
+            printf("\nInvalid command!");
+        }
 
-		// ?? free up any malloc'd argv parameters
-		for (i = 0; i < newArgc; i++)
-		{
-			free(newArgv[i]);
-		}
-		free(newArgv);
-	}
+        // ?? free up any malloc'd argv parameters
+        for (i = 0; i < newArgc; i++) {
+            free(newArgv[i]);
+        }
+        free(newArgv);
+    }
 #pragma clang diagnostic pop
-	return 0; // terminate task
+    return 0; // terminate task
 }
 
-bool checkFinalArgForAmpersand(char* finalArg) {
+bool checkFinalArgForAmpersand(char *finalArg) {
     for (int i = 0; i < strlen(finalArg); i++) {
         if (finalArg[i] == '&') {
             return 1;
@@ -215,111 +227,96 @@ bool checkFinalArgForAmpersand(char* finalArg) {
 //
 #define NUM_ALIVE 3
 
-int P1AliveTask(int argc, char *argv[])
-{
-	while (1)
-	{
-		int i;
-		printf("\n(%d) ", curTask);
-		for (i = 0; i < argc; i++)
-			printf("%s%s", argv[i], (i < argc) ? " " : "");
-		for (i = 0; i < 100000; i++)
-			swapTask();
-	}
-	return 0; // terminate task
+int P1AliveTask(int argc, char *argv[]) {
+    while (1) {
+        int i;
+        printf("\n(%d) ", curTask);
+        for (i = 0; i < argc; i++)
+            printf("%s%s", argv[i], (i < argc) ? " " : "");
+        for (i = 0; i < 100000; i++)
+            swapTask();
+    }
+    return 0; // terminate task
 } // end P1AliveTask
 
-int P1_project1(int argc, char *argv[])
-{
-	int p1_mode = 0;
-	// check if just changing P1 mode
-	if (argc > 1)
-	{
-		p1_mode = atoi(argv[1]);
-	}
-	switch (p1_mode)
-	{
-	default:
-	case 0:
-	{
-		int j;
-		for (j = 0; j < 4; j++)
-		{
-			int i;
-			printf("\nI'm Alive %d,%d", curTask, j);
-			for (i = 0; i < 100000; i++)
-				swapTask();
-		}
-		break;
-	}
+int P1_project1(int argc, char *argv[]) {
+    int p1_mode = 0;
+    // check if just changing P1 mode
+    if (argc > 1) {
+        p1_mode = atoi(argv[1]);
+    }
+    switch (p1_mode) {
+        default:
+        case 0: {
+            int j;
+            for (j = 0; j < 4; j++) {
+                int i;
+                printf("\nI'm Alive %d,%d", curTask, j);
+                for (i = 0; i < 100000; i++)
+                    swapTask();
+            }
+            break;
+        }
 
-	case 1:
-	{
-		int i;
-		char buffer[16];
-		for (i = 0; i < NUM_ALIVE; i++)
-		{
-			sprintf(buffer, "I'm Alive %d", i);
-			createTask(buffer,		 // task name
-					   P1AliveTask,	 // task
-					   LOW_PRIORITY, // task priority
-					   argc,		 // task argc
-					   argv);		 // task argument pointers
-		}
-	}
-	break;
-	}
-	return 0;
+        case 1: {
+            int i;
+            char buffer[16];
+            for (i = 0; i < NUM_ALIVE; i++) {
+                sprintf(buffer, "I'm Alive %d", i);
+                createTask(buffer,         // task name
+                           P1AliveTask,     // task
+                           LOW_PRIORITY, // task priority
+                           argc,         // task argc
+                           argv);         // task argument pointers
+            }
+        }
+            break;
+    }
+    return 0;
 } // end P1_project1
 
 // ***********************************************************************
 // ***********************************************************************
 // quit command
 //
-int P1_quit(int argc, char *argv[])
-{
-	int i;
+int P1_quit(int argc, char *argv[]) {
+    int i;
 
-	// free P1 commands
-	for (i = 0; i < NUM_COMMANDS; i++)
-	{
-		free(commands[i]->command);
-		free(commands[i]->shortcut);
-		free(commands[i]->description);
-	}
-	free(commands);
+    // free P1 commands
+    for (i = 0; i < NUM_COMMANDS; i++) {
+        free(commands[i]->command);
+        free(commands[i]->shortcut);
+        free(commands[i]->description);
+    }
+    free(commands);
 
-	// powerdown OS345
-	longjmp(reset_context, POWER_DOWN_QUIT);
-	return 0;
+    // powerdown OS345
+    longjmp(reset_context, POWER_DOWN_QUIT);
+    return 0;
 } // end P1_quit
 
 // **************************************************************************
 // **************************************************************************
 // lc3 command
 //
-int P1_lc3(int argc, char *argv[])
-{
-	strcpy(argv[0], "0");
-	return lc3Task(argc, argv);
+int P1_lc3(int argc, char *argv[]) {
+    strcpy(argv[0], "0");
+    return lc3Task(argc, argv);
 } // end P1_lc3
 
-int P1_add(int argc, char *argv[])
-{
-	int returnVal = 0;
+int P1_add(int argc, char *argv[]) {
+    int returnVal = 0;
 
-	if (argc > 1)
-	{
-		for (int i = 1; i < argc; ++i)
-		{
+    if (argc > 1) {
+        for (int i = 1; i < argc; ++i) {
             if ((int) argv[i] != '&') {
                 returnVal += strtol(argv[i], NULL, 0);
             }
-		}
-	}
+        }
+    }
     printf("\nadd returned %d", returnVal);
 
-	return 0;
+    return 0;
 }
 
 int P1_args(int argc, char *argv[]) {
@@ -333,122 +330,118 @@ int P1_args(int argc, char *argv[]) {
 // ***********************************************************************
 // help command
 //
-int P1_help(int argc, char *argv[])
-{
-	int i;
+int P1_help(int argc, char *argv[]) {
+    int i;
 
-	// list commands
-	for (i = 0; i < NUM_COMMANDS; i++)
-	{
-		SWAP // do context switch
-			if (strstr(commands[i]->description, ":")) printf("\n");
-		printf("\n%4s: %s", commands[i]->shortcut, commands[i]->description);
-	}
+    // list commands
+    for (i = 0; i < NUM_COMMANDS; i++) {
+        SWAP // do context switch
+        if (strstr(commands[i]->description, ":")) printf("\n");
+        printf("\n%4s: %s", commands[i]->shortcut, commands[i]->description);
+    }
 
-	return 0;
+    return 0;
 } // end P1_help
 
 // ***********************************************************************
 // ***********************************************************************
 // initialize shell commands
 //
-Command *newCommand(char *command, char *shortcut, int (*func)(int, char **), char *description)
-{
-	Command *cmd = (Command *)malloc(sizeof(Command));
+Command *newCommand(char *command, char *shortcut, int (*func)(int, char **), char *description) {
+    Command *cmd = (Command *) malloc(sizeof(Command));
 
-	// get long command
-	cmd->command = (char *)malloc(strlen(command) + 1);
-	strcpy(cmd->command, command);
+    // get long command
+    cmd->command = (char *) malloc(strlen(command) + 1);
+    strcpy(cmd->command, command);
 
-	// get shortcut command
-	cmd->shortcut = (char *)malloc(strlen(shortcut) + 1);
-	strcpy(cmd->shortcut, shortcut);
+    // get shortcut command
+    cmd->shortcut = (char *) malloc(strlen(shortcut) + 1);
+    strcpy(cmd->shortcut, shortcut);
 
-	// get function pointer
-	cmd->func = func;
+    // get function pointer
+    cmd->func = func;
 
-	// get description
-	cmd->description = (char *)malloc(strlen(description) + 1);
-	strcpy(cmd->description, description);
+    // get description
+    cmd->description = (char *) malloc(strlen(description) + 1);
+    strcpy(cmd->description, description);
 
-	return cmd;
+    return cmd;
 } // end newCommand
 
-Command **P1_init()
-{
-	int i = 0;
-	Command **commands = (Command **)malloc(sizeof(Command *) * NUM_COMMANDS);
+Command **P1_init() {
+    int i = 0;
+    Command **commands = (Command **) malloc(sizeof(Command *) * NUM_COMMANDS);
 
-	// system
-	commands[i++] = newCommand("quit", "q", P1_quit, "Quit");
-	commands[i++] = newCommand("kill", "kt", P2_killTask, "Kill task");
-	commands[i++] = newCommand("reset", "rs", P2_reset, "Reset system");
+    // system
+    commands[i++] = newCommand("quit", "q", P1_quit, "Quit");
+    commands[i++] = newCommand("kill", "kt", P2_killTask, "Kill task");
+    commands[i++] = newCommand("reset", "rs", P2_reset, "Reset system");
 
-	// P1: Shell
-	commands[i++] = newCommand("project1", "p1", P1_project1, "P1: Shell");
-	commands[i++] = newCommand("help", "he", P1_help, "OS345 Help");
-	commands[i++] = newCommand("lc3", "lc3", P1_lc3, "Execute LC3 program");
-	commands[i++] = newCommand("add", "a", P1_add, "P1: Adds the args together");
+    // P1: Shell
+    commands[i++] = newCommand("project1", "p1", P1_project1, "P1: Shell");
+    commands[i++] = newCommand("help", "he", P1_help, "OS345 Help");
+    commands[i++] = newCommand("lc3", "lc3", P1_lc3, "Execute LC3 program");
+    commands[i++] = newCommand("add", "a", P1_add, "P1: Adds the args together");
     commands[i++] = newCommand("args", "ar", P1_args, "P1: prints all the args");
 
-	// P2: Tasking
-	commands[i++] = newCommand("project2", "p2", P2_main, "P2: Tasking");
-	commands[i++] = newCommand("semaphores", "sem", P2_listSems, "List semaphores");
-	commands[i++] = newCommand("tasks", "lt", P2_listTasks, "List tasks");
-	commands[i++] = newCommand("signal1", "s1", P2_signal1, "Signal sem1 semaphore");
-	commands[i++] = newCommand("signal2", "s2", P2_signal2, "Signal sem2 semaphore");
+    // P2: Tasking
+    commands[i++] = newCommand("project2", "p2", P2_main, "P2: Tasking");
+    commands[i++] = newCommand("semaphores", "sem", P2_listSems, "List semaphores");
+    commands[i++] = newCommand("tasks", "lt", P2_listTasks, "List tasks");
+    commands[i++] = newCommand("signal1", "s1", P2_signal1, "Signal sem1 semaphore");
+    commands[i++] = newCommand("signal2", "s2", P2_signal2, "Signal sem2 semaphore");
 
-	// P3: Jurassic Park
-	commands[i++] = newCommand("project3", "p3", P3_main, "P3: Jurassic Park");
-	commands[i++] = newCommand("deltaclock", "dc", P3_dc, "List deltaclock entries");
+    // P3: Jurassic Park
+    commands[i++] = newCommand("project3", "p3", P3_main, "P3: Jurassic Park");
+    commands[i++] = newCommand("deltaclock", "dc", P3_dc, "List deltaclock entries");
 
-	// P4: Virtual Memory
-	commands[i++] = newCommand("project4", "p4", P4_main, "P4: Virtual Memory");
-	commands[i++] = newCommand("frametable", "dft", P4_dumpFrameTable, "Dump bit frame table");
-	commands[i++] = newCommand("initmemory", "im", P4_initMemory, "Initialize virtual memory");
-	commands[i++] = newCommand("touch", "vma", P4_vmaccess, "Access LC-3 memory location");
-	commands[i++] = newCommand("stats", "vms", P4_virtualMemStats, "Output virtual memory stats");
-	commands[i++] = newCommand("crawler", "cra", P4_crawler, "Execute crawler.hex");
-	commands[i++] = newCommand("memtest", "mem", P4_memtest, "Execute memtest.hex");
+    // P4: Virtual Memory
+    commands[i++] = newCommand("project4", "p4", P4_main, "P4: Virtual Memory");
+    commands[i++] = newCommand("frametable", "dft", P4_dumpFrameTable, "Dump bit frame table");
+    commands[i++] = newCommand("initmemory", "im", P4_initMemory, "Initialize virtual memory");
+    commands[i++] = newCommand("touch", "vma", P4_vmaccess, "Access LC-3 memory location");
+    commands[i++] = newCommand("stats", "vms", P4_virtualMemStats, "Output virtual memory stats");
+    commands[i++] = newCommand("crawler", "cra", P4_crawler, "Execute crawler.hex");
+    commands[i++] = newCommand("memtest", "mem", P4_memtest, "Execute memtest.hex");
 
-	commands[i++] = newCommand("frame", "dfm", P4_dumpFrame, "Dump LC-3 memory frame");
-	commands[i++] = newCommand("memory", "dm", P4_dumpLC3Mem, "Dump LC-3 memory");
-	commands[i++] = newCommand("page", "dp", P4_dumpPageMemory, "Dump swap page");
-	commands[i++] = newCommand("virtual", "dvm", P4_dumpVirtualMem, "Dump virtual memory page");
-	commands[i++] = newCommand("root", "rpt", P4_rootPageTable, "Display root page table");
-	commands[i++] = newCommand("user", "upt", P4_userPageTable, "Display user page table");
+    commands[i++] = newCommand("frame", "dfm", P4_dumpFrame, "Dump LC-3 memory frame");
+    commands[i++] = newCommand("memory", "dm", P4_dumpLC3Mem, "Dump LC-3 memory");
+    commands[i++] = newCommand("page", "dp", P4_dumpPageMemory, "Dump swap page");
+    commands[i++] = newCommand("virtual", "dvm", P4_dumpVirtualMem, "Dump virtual memory page");
+    commands[i++] = newCommand("root", "rpt", P4_rootPageTable, "Display root page table");
+    commands[i++] = newCommand("user", "upt", P4_userPageTable, "Display user page table");
 
-	// P5: Scheduling
-	commands[i++] = newCommand("project5", "p5", P5_main, "P5: Scheduling");
+    // P5: Scheduling
+    commands[i++] = newCommand("project5", "p5", P5_main, "P5: Scheduling");
 
-	// P6: FAT
-	commands[i++] = newCommand("project6", "p6", P6_main, "P6: FAT");
-	commands[i++] = newCommand("change", "cd", P6_cd, "Change directory");
-	commands[i++] = newCommand("copy", "cf", P6_copy, "Copy file");
-	commands[i++] = newCommand("define", "df", P6_define, "Define file");
-	commands[i++] = newCommand("delete", "dl", P6_del, "Delete file");
-	commands[i++] = newCommand("directory", "dir", P6_dir, "List current directory");
-	commands[i++] = newCommand("mount", "md", P6_mount, "Mount disk");
-	commands[i++] = newCommand("mkdir", "mk", P6_mkdir, "Create directory");
-	commands[i++] = newCommand("run", "run", P6_run, "Execute LC-3 program");
-	commands[i++] = newCommand("space", "sp", P6_space, "Space on disk");
-	commands[i++] = newCommand("type", "ty", P6_type, "Type file");
-	commands[i++] = newCommand("unmount", "um", P6_unmount, "Unmount disk");
+    // P6: FAT
+    commands[i++] = newCommand("project6", "p6", P6_main, "P6: FAT");
+    commands[i++] = newCommand("change", "cd", P6_cd, "Change directory");
+    commands[i++] = newCommand("copy", "cf", P6_copy, "Copy file");
+    commands[i++] = newCommand("define", "df", P6_define, "Define file");
+    commands[i++] = newCommand("delete", "dl", P6_del, "Delete file");
+    commands[i++] = newCommand("directory", "dir", P6_dir, "List current directory");
+    commands[i++] = newCommand("mount", "md", P6_mount, "Mount disk");
+    commands[i++] = newCommand("mkdir", "mk", P6_mkdir, "Create directory");
+    commands[i++] = newCommand("run", "run", P6_run, "Execute LC-3 program");
+    commands[i++] = newCommand("space", "sp", P6_space, "Space on disk");
+    commands[i++] = newCommand("type", "ty", P6_type, "Type file");
+    commands[i++] = newCommand("unmount", "um", P6_unmount, "Unmount disk");
 
-	commands[i++] = newCommand("fat", "ft", P6_dfat, "Display fat table");
-	commands[i++] = newCommand("fileslots", "fs", P6_fileSlots, "Display current open slots");
-	commands[i++] = newCommand("sector", "ds", P6_dumpSector, "Display disk sector");
-	commands[i++] = newCommand("chkdsk", "ck", P6_chkdsk, "Check disk");
-	commands[i++] = newCommand("final", "ft", P6_finalTest, "Execute file test");
+    commands[i++] = newCommand("fat", "ft", P6_dfat, "Display fat table");
+    commands[i++] = newCommand("fileslots", "fs", P6_fileSlots, "Display current open slots");
+    commands[i++] = newCommand("sector", "ds", P6_dumpSector, "Display disk sector");
+    commands[i++] = newCommand("chkdsk", "ck", P6_chkdsk, "Check disk");
+    commands[i++] = newCommand("final", "ft", P6_finalTest, "Execute file test");
 
-	commands[i++] = newCommand("open", "op", P6_open, "Open file test");
-	commands[i++] = newCommand("read", "rd", P6_read, "Read file test");
-	commands[i++] = newCommand("write", "wr", P6_write, "Write file test");
-	commands[i++] = newCommand("seek", "sk", P6_seek, "Seek file test");
-	commands[i++] = newCommand("close", "cl", P6_close, "Close file test");
+    commands[i++] = newCommand("open", "op", P6_open, "Open file test");
+    commands[i++] = newCommand("read", "rd", P6_read, "Read file test");
+    commands[i++] = newCommand("write", "wr", P6_write, "Write file test");
+    commands[i++] = newCommand("seek", "sk", P6_seek, "Seek file test");
+    commands[i++] = newCommand("close", "cl", P6_close, "Close file test");
 
-	assert(i == NUM_COMMANDS);
+    assert(i == NUM_COMMANDS);
 
-	return commands;
+    return commands;
 
 } // end P1_init

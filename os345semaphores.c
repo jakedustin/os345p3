@@ -54,6 +54,7 @@ void semSignal(Semaphore* s)
 		// look through tasks for one suspended on this semaphore
 
 temp:	// ?? temporary label
+        // TODO: remove the loop but maintain the functionality once the priority queue works
 		for (i=0; i<MAX_TASKS; i++)	// look for suspended task
 		{
 			if (tcb[i].event == s)

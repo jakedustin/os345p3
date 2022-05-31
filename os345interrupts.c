@@ -115,10 +115,39 @@ static void keyboard_isr()
 				break;
 			}
 
+            case 0x17:                      // ^w
+            {
+                printf("\ncalling sigSignal");
+                sigSignal(-1, mySIGTSTP);
+                break;
+            }
+
+            case 0x12:                      // ^r
+            {
+                sigSignal(-1, mySIGCONT);
+                break;
+            }
+
+            case 0x7f:                       // backspace
+            {
+                if (inBufIndx > 0) {
+
+                    printf("\b \b");
+                    inBuffer[--inBufIndx] = 0;
+                }
+                break;
+            }
+
 			default:
 			{
-				inBuffer[inBufIndx++] = inChar;
-				inBuffer[inBufIndx] = 0;
+                if (inBufIndx + 1 > 255) {
+                    printf("\nThat's too many letters, friendo.");
+                    inBufIndx = 0;				// EOL, signal line ready
+                    semSignal(inBufferReady);
+                    break;
+                }
+				inBuffer[inBufIndx] = inChar;
+				inBuffer[++inBufIndx] = 0;
 				printf("%c", inChar);		// echo character
 			}
 		}

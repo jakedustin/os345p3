@@ -247,7 +247,7 @@ static int dispatcher()
 			else printf("\nTask[%d] returned %d", curTask, result);
 			tcb[curTask].state = S_EXIT;			// set task to exit state
 
-			// return to kernal mode
+			// return to kernel mode
 			longjmp(k_context, 1);					// return to kernel
 		}
 
@@ -264,6 +264,7 @@ static int dispatcher()
 				superMode = TRUE;					// supervisor mode
 				break;								// return from task
 			}
+            // signals return 1 sometimes (check when) so the loop will only break if there are signals pending
 			if (signals()) break;
 			longjmp(tcb[curTask].context, 3); 		// restore task context
 		}

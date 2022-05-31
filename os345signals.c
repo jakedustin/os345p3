@@ -25,8 +25,8 @@
 #include "os345.h"
 #include "os345signals.h"
 
-extern TCB tcb[];							// task control block
-extern int curTask;							// current task #
+extern TCB tcb[];                            // task control block
+extern int curTask;                            // current task #
 
 // ***********************************************************************
 // ***********************************************************************
@@ -34,17 +34,26 @@ extern int curTask;							// current task #
 //
 //	return 1 if task is NOT to be scheduled.
 //
-int signals(void)
-{
-	if (tcb[curTask].signal)
-	{
-		if (tcb[curTask].signal & mySIGINT)
-		{
-			tcb[curTask].signal &= ~mySIGINT;
-			(*tcb[curTask].sigIntHandler)();
-		}
-	}
-	return 0;
+int signals(void) {
+    if (tcb[curTask].signal) {
+        if (tcb[curTask].signal & mySIGINT) {
+            // clears the sigint out of the signals array
+            tcb[curTask].signal &= ~mySIGINT;
+            (*tcb[curTask].sigIntHandler)();
+        } else if (tcb[curTask].signal & mySIGCONT) {
+            tcb[curTask].signal &= ~mySIGCONT;
+            (*tcb[curTask].sigContHandler)();
+        } else if (tcb[curTask].signal & mySIGTERM) {
+            tcb[curTask].signal &= ~mySIGTERM;
+            (*tcb[curTask].sigTermHandler)();
+            return 1;
+        } else if (tcb[curTask].signal & mySIGTSTP) {
+            tcb[curTask].signal &= ~mySIGTSTP;
+            (*tcb[curTask].sigTstpHandler)();
+            return 1;
+        }
+    }
+    return 0;
 }
 
 
@@ -52,17 +61,26 @@ int signals(void)
 // **********************************************************************
 //	Register task signal handlers
 //
-int sigAction(void (*sigHandler)(void), int sig)
-{
-	switch (sig)
-	{
-		case mySIGINT:
-		{
-			tcb[curTask].sigIntHandler = sigHandler;		// mySIGINT handler
-			return 0;
-		}
-	}
-	return 1;
+int sigAction(void (*sigHandler)(void), int sig) {
+    switch (sig) {
+        case mySIGINT: {
+            tcb[curTask].sigIntHandler = sigHandler;        // mySIGINT handler
+            return 0;
+        }
+        case mySIGCONT: {
+            tcb[curTask].sigContHandler = sigHandler;
+            return 0;
+        }
+        case mySIGTERM: {
+            tcb[curTask].sigTermHandler = sigHandler;
+            return 0;
+        }
+        case mySIGTSTP: {
+            tcb[curTask].sigTstpHandler = sigHandler;
+            return 0;
+        }
+    }
+    return 1;
 }
 
 
@@ -72,24 +90,26 @@ int sigAction(void (*sigHandler)(void), int sig)
 //	taskId = task (-1 = all tasks)
 //	sig = signal
 //
-int sigSignal(int taskId, int sig)
-{
-	// check for task
-	if ((taskId >= 0) && tcb[taskId].name)
-	{
-		tcb[taskId].signal |= sig;
-		return 0;
-	}
-	else if (taskId == -1)
-	{
-		for (taskId=0; taskId<MAX_TASKS; taskId++)
-		{
-			sigSignal(taskId, sig);
-		}
-		return 0;
-	}
-	// error
-	return 1;
+int sigSignal(int taskId, int sig) {
+    // check for task
+    if (sig == mySIGCONT) {
+        for (taskId = 0; taskId < MAX_TASKS; taskId++) {
+            tcb[taskId].signal &= ~mySIGSTOP;
+            tcb[taskId].signal &= ~mySIGTSTP;
+        }
+    }
+
+    if ((taskId >= 0) && tcb[taskId].name) {
+        tcb[taskId].signal |= sig;
+        return 0;
+    } else if (taskId == -1) {
+        for (taskId = 0; taskId < MAX_TASKS; taskId++) {
+            sigSignal(taskId, sig);
+        }
+        return 0;
+    }
+    // error
+    return 1;
 }
 
 
@@ -97,24 +117,48 @@ int sigSignal(int taskId, int sig)
 // **********************************************************************
 //	Default signal handlers
 //
-void defaultSigIntHandler(void)			// task mySIGINT handler
+// TODO: fill out defaults
+void defaultSigIntHandler(void)            // task mySIGINT handler
 {
-	printf("\ndefaultSigIntHandler");
-	return;
+    printf("\ndefaultSigIntHandler");
+    return;
 }
 
+void defaultSigTstpHandler(void) {
+    printf("\ndefaultSigTstpHandler");
+    return;
+}
 
-void createTaskSigHandlers(int tid)
-{
-	tcb[tid].signal = 0;
-	if (tid)
-	{
-		// inherit parent signal handlers
-		tcb[tid].sigIntHandler = tcb[curTask].sigIntHandler;			// mySIGINT handler
-	}
-	else
-	{
-		// otherwise use defaults
-		tcb[tid].sigIntHandler = defaultSigIntHandler;			// task mySIGINT handler
-	}
+void defaultSigTermHandler(void) {
+    printf("\ndefaultSigTermHandler");
+    return;
+}
+
+void defaultSigContHandler(void) {
+    printf("\ndefaultSigContHandler");
+    return;
+}
+
+void defaultSigKillHandler(void) {
+    printf("\ndefaultSigKillHandler");
+    return;
+}
+
+void createTaskSigHandlers(int tid) {
+    tcb[tid].signal = 0;
+    if (tid) {
+        // inherit parent signal handlers
+        tcb[tid].sigIntHandler = tcb[curTask].sigIntHandler;            // mySIGINT handler
+        tcb[tid].sigTstpHandler = tcb[curTask].sigTstpHandler;
+        tcb[tid].sigContHandler = tcb[curTask].sigContHandler;
+        tcb[tid].sigTermHandler = tcb[curTask].sigTermHandler;
+        tcb[tid].sigKillHandler = tcb[curTask].sigKillHandler;
+    } else {
+        // otherwise use defaults
+        tcb[tid].sigIntHandler = defaultSigIntHandler;            // task mySIGINT handler
+        tcb[tid].sigTstpHandler = defaultSigTstpHandler;
+        tcb[tid].sigContHandler = defaultSigContHandler;
+        tcb[tid].sigTermHandler = defaultSigTermHandler;
+        tcb[tid].sigKillHandler = defaultSigKillHandler;
+    }
 }
