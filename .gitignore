@@ -1,1 +1,14 @@
 /cmake-build-debug/*
+/cmake-build-debug/.ninja_deps
+/cmake-build-debug/.ninja_log
+/cmake-build-debug/Testing/Temporary/LastTest.log
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345interrupts.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345p1.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345p2.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345p4.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345p6.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345semaphores.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345signals.c.o
+/cmake-build-debug/CMakeFiles/os345_cmake.dir/os345tasks.c.o
+/os
