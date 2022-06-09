@@ -56,6 +56,7 @@ Semaphore* inBufferReady;			// input buffer ready semaphore
 
 Semaphore* tics1sec;				// 1 second semaphore
 Semaphore* tics10thsec;				// 1/10 second semaphore
+Semaphore* tics10sec;
 
 // **********************************************************************
 // **********************************************************************
@@ -82,9 +83,10 @@ int lastPollClock;					// last pollClock
 bool diskMounted;					// disk has been mounted
 
 time_t oldTime1;					// old 1sec time
+time_t oldTime10;
 clock_t myClkTime;
 clock_t myOldClkTime;
-int* rq;							// ready priority queue
+PQueue rq;					// ready priority queue
 
 
 // **********************************************************************
@@ -137,6 +139,7 @@ int main(int argc, char* argv[])
 	keyboard = createSemaphore("keyboard", BINARY, 1);
 	tics1sec = createSemaphore("tics1sec", BINARY, 0);
 	tics10thsec = createSemaphore("tics10thsec", BINARY, 0);
+    tics10sec = createSemaphore("tics10sec", COUNTING, 0);
 
 	//?? ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -157,11 +160,14 @@ int main(int argc, char* argv[])
 
 	while(1)									// scheduling loop
 	{
+        // TODO: make task, run it, then in poll interrupts, signal ticstenseconds semaphore, then see if task that waits on semaphore prints every ten seconds
+        // todo: use sem command to print out semaphores and states
 		// check for character / timer interrupts
 		pollInterrupts();
 
 		// schedule highest priority ready task
-		if ((curTask = scheduler()) < 0) continue;
+        curTask = scheduler();
+		if (curTask < 0) continue;
 
 		// dispatch curTask, quit OS if negative return
 		if (dispatcher() < 0) break;
@@ -178,33 +184,13 @@ int main(int argc, char* argv[])
 // **********************************************************************
 // scheduler
 //
-static int scheduler()
-{
-	int nextTask;
-	// ?? Design and implement a scheduler that will select the next highest
-	// ?? priority ready task to pass to the system dispatcher.
-
-	// ?? WARNING: You must NEVER call swapTask() from within this function
-	// ?? or any function that it calls.  This is because swapping is
-	// ?? handled entirely in the swapTask function, which, in turn, may
-	// ?? call this function.  (ie. You would create an infinite loop.)
-
-	// ?? Implement a round-robin, preemptive, prioritized scheduler.
-
-	// ?? This code is simply a round-robin scheduler and is just to get
-	// ?? you thinking about scheduling.  You must implement code to handle
-	// ?? priorities, clean up dead tasks, and handle semaphores appropriately.
-
-	// schedule next task
-	nextTask = ++curTask;
-
-	// mask sure nextTask is valid
-	while (!tcb[nextTask].name)
-	{
-		if (++nextTask >= MAX_TASKS) nextTask = 0;
-	}
-	if (tcb[nextTask].signal & mySIGSTOP) return -1;
-
+static int scheduler() {
+    int nextTask = deQ(rq, -1);
+    // FIXME: where is this task coming from and what is it?
+    if (nextTask >= 0) {
+        enQ(rq, nextTask, tcb[nextTask].priority);
+    }
+    if (tcb[nextTask].signal & mySIGSTOP) return -1;
 	return nextTask;
 } // end scheduler
 
@@ -266,6 +252,7 @@ static int dispatcher()
 			}
             // signals return 1 sometimes (check when) so the loop will only break if there are signals pending
 			if (signals()) break;
+            // FIXME: this is where it's jumping out
 			longjmp(tcb[curTask].context, 3); 		// restore task context
 		}
 
@@ -358,6 +345,7 @@ static int initOS()
 	// capture current time
 	lastPollClock = clock();			// last pollClock
 	time(&oldTime1);
+    time(&oldTime10);
 
 	// init system tcb's
 	for (i=0; i<MAX_TASKS; i++)

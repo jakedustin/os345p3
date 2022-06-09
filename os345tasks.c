@@ -72,7 +72,7 @@ int createTask(char* name,						// task name
 			tcb[tid].parent = curTask;		// parent
 			tcb[tid].argc = argc;			// argument count
 
-			// ?? malloc new argv parameters
+			// malloc new argv parameters
 			tcb[tid].argv = argv;			// argument pointers
             tcb[tid].argv = (char**)(malloc(argc * sizeof(char*)));
             for (int i = 0; i < argc; ++i) {
@@ -92,7 +92,8 @@ int createTask(char* name,						// task name
 			// Each task must have its own stack and stack pointer.
 			tcb[tid].stack = malloc(STACK_SIZE * sizeof(int));
 
-			// ?? may require inserting task into "ready" queue
+			// inserting task into "ready" queue
+            enQ(rq, tid, tcb[tid].priority);
 
 			if (tid) swapTask();				// do context switch (if not cli)
 			return tid;							// return tcb index (curTask)
@@ -120,7 +121,9 @@ int killTask(int taskId)
 			int tid;
 			for (tid = 1; tid < MAX_TASKS; tid++)
 			{
-				if (tcb[tid].name) exitTask(tid);
+				if (tcb[tid].name) {
+                    exitTask(tid);
+                }
 			}
 		}
 		else
@@ -143,6 +146,11 @@ static void exitTask(int taskId)
 	// 3. set state to exit
 
 	// ?? add code here
+    if (tcb[taskId].state == S_BLOCKED) {
+        deQ(tcb[taskId].event->pq, taskId);
+        if (tcb[taskId].event->type == 1 && tcb[taskId].event->state < 0) tcb[taskId].event->state += 1;
+        enQ(rq, taskId, tcb[taskId].priority);
+    }
 
 	tcb[taskId].state = S_EXIT;			// EXIT task state
 	return;
@@ -155,10 +163,14 @@ static void exitTask(int taskId)
 //
 int sysKillTask(int taskId)
 {
+    printf("\nattempting to kill task %d", taskId);
+    printf("\ntcb[taskId].name:\t%s", tcb[taskId].name);
 	Semaphore* sem = semaphoreList;
 	Semaphore** semLink = &semaphoreList;
 
 	// assert that you are not pulling the rug out from under yourself!
+    assert("sysKillTaskError -> task" && tcb[taskId].name);
+    assert("sysKillTaskError -> superMode" && superMode);
 	assert("sysKillTask Error" && tcb[taskId].name && superMode);
 	printf("\nKill Task %s", tcb[taskId].name);
 
@@ -184,8 +196,8 @@ int sysKillTask(int taskId)
         free(tcb[taskId].argv[i]);
     }
     free(tcb[taskId].argv);
-	// ?? delete task from system queues (proj2)
 
+    deQ(rq, taskId);
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;
 } // end sysKillTask

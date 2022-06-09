@@ -155,6 +155,37 @@ build os345_cmake: C_EXECUTABLE_LINKER__os345_cmake_Debug CMakeFiles/os345_cmake
   TARGET_FILE = os345_cmake
   TARGET_PDB = os345_cmake.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target os345_scratch
+
+
+#############################################
+# Order-only phony target for os345_scratch
+
+build cmake_object_order_depends_target_os345_scratch: phony || CMakeFiles/os345_scratch.dir
+
+build CMakeFiles/os345_scratch.dir/scratch.c.o: C_COMPILER__os345_scratch_Debug /Users/jdustin/Documents/school/cs-345/os345_cmake/scratch.c || cmake_object_order_depends_target_os345_scratch
+  DEP_FILE = CMakeFiles/os345_scratch.dir/scratch.c.o.d
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.3.sdk -std=gnu99
+  OBJECT_DIR = CMakeFiles/os345_scratch.dir
+  OBJECT_FILE_DIR = CMakeFiles/os345_scratch.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target os345_scratch
+
+
+#############################################
+# Link the executable os345_scratch
+
+build os345_scratch: C_EXECUTABLE_LINKER__os345_scratch_Debug CMakeFiles/os345_scratch.dir/scratch.c.o
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.3.sdk
+  OBJECT_DIR = CMakeFiles/os345_scratch.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = os345_scratch
+  TARGET_PDB = os345_scratch.dbg
+
 
 #############################################
 # Utility command for edit_cache
@@ -189,7 +220,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 #############################################
 # Folder: /Users/jdustin/Documents/school/cs-345/os345_cmake/cmake-build-debug
 
-build all: phony os345_cmake
+build all: phony os345_cmake os345_scratch
 
 # =============================================================================
 # Built-in targets

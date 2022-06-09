@@ -117,7 +117,6 @@ int sigSignal(int taskId, int sig) {
 // **********************************************************************
 //	Default signal handlers
 //
-// TODO: fill out defaults
 void defaultSigIntHandler(void)            // task mySIGINT handler
 {
     printf("\ndefaultSigIntHandler");

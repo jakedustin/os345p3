@@ -70,6 +70,8 @@ enum {PAGE_INIT, PAGE_READ, PAGE_OLD_WRITE, PAGE_NEW_WRITE,
 // system structs
 typedef int bool;						// boolean value
 typedef int TID;						// task id
+typedef int* PQueue;                     // priority queue
+typedef int Priority;                   // priority
 
 // semaphore
 typedef struct semaphore				// semaphore
@@ -79,6 +81,7 @@ typedef struct semaphore				// semaphore
 	int state;							// semaphore state
 	int type;							// semaphore type
 	int taskNum;						// semaphore creator task #
+    PQueue pq;
 } Semaphore;
 
 // task control block
@@ -117,6 +120,8 @@ typedef struct
 } Message;
 #define MAX_MESSAGE_SIZE		64
 
+extern PQueue rq;
+
 // ***********************************************************************
 // system prototypes
 int createTask(char*, int (*)(int, char**), int, int, char**);
@@ -133,6 +138,11 @@ bool deleteSemaphore(Semaphore** semaphore);
 void semSignal(Semaphore*);
 int semWait(Semaphore*);
 int semTryLock(Semaphore*);
+int enQ(PQueue q, TID tid, Priority p);
+int deQ(PQueue q, TID tid);
+int16_t getPriority(int32_t combinedKey);
+int16_t getTid(int32_t combinedKey);
+void decrementPQueue(PQueue q, size_t index);
 
 
 // ***********************************************************************

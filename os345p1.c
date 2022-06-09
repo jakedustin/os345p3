@@ -159,7 +159,7 @@ int P1_main(int argc, char *argv[]) {
             } else {
                 sp = strchr(sp, '\0');
                 *sp++ = 0;
-                myArgv[newArgc] = sp;
+                myArgv[newArgc++] = sp;
             }
 
             // newArgv = myArgv;
