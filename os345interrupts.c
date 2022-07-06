@@ -48,6 +48,11 @@ extern Semaphore *inBufferReady;            // input buffer ready semaphore
 extern Semaphore *tics1sec;                // 1 second semaphore
 extern Semaphore *tics10thsec;                // 1/10 second semaphore
 extern Semaphore *tics10sec;
+extern Semaphore *dcChange;
+
+extern DeltaClock *deltaClock;
+extern int deltaClockCount;
+extern int popDeltaClock();
 
 extern char inChar;                // last entered character
 extern int charFlag;                // 0 => buffered input
@@ -76,7 +81,6 @@ void pollInterrupts(void) {
     lastPollClock = pollClock;
 
     // check for keyboard interrupt
-    // FIXME: seems to be getting characters when there are no characters left
     if ((inChar = GET_CHAR) > 0) {
         keyboard_isr();
     }
@@ -177,15 +181,24 @@ static void timer_isr() {
     }
 
     // sample fine clock
+    // if the delta clock is not empty, decrement the top item
+    // if the top item's clock is now zero, signal its semaphore and pop the clock
     myClkTime = clock();
     if ((myClkTime - myOldClkTime) >= ONE_TENTH_SEC) {
         myOldClkTime = myOldClkTime + ONE_TENTH_SEC;   // update old
+        if (deltaClockCount > 0) {
+
+            deltaClock[0].time -= 1;
+            if (deltaClock[0].time <= 0) {
+                SEM_SIGNAL(deltaClock[0].sem);
+                popDeltaClock();
+            }
+        }
         semSignal(tics10thsec);
     }
 
-    // ?? add other timer sampling/signaling code here for project 2
+    // add other timer sampling/signaling code here for project 2
     if ((currentTime - oldTime10) >= 10) {
-        printf("\nSignaling tics10sec semaphore");
         SEM_SIGNAL(tics10sec);
         oldTime10 = currentTime;
     }

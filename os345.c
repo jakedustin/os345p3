@@ -53,6 +53,7 @@ Semaphore* semaphoreList;			// linked list of active semaphores
 Semaphore* keyboard;				// keyboard semaphore
 Semaphore* charReady;				// character has been entered
 Semaphore* inBufferReady;			// input buffer ready semaphore
+Semaphore* dcChange;
 
 Semaphore* tics1sec;				// 1 second semaphore
 Semaphore* tics10thsec;				// 1/10 second semaphore
@@ -87,6 +88,8 @@ time_t oldTime10;
 clock_t myClkTime;
 clock_t myOldClkTime;
 PQueue rq;					// ready priority queue
+DeltaClock *deltaClock;
+int deltaClockCount;
 
 
 // **********************************************************************
@@ -186,7 +189,7 @@ int main(int argc, char* argv[])
 //
 static int scheduler() {
     int nextTask = deQ(rq, -1);
-    // FIXME: where is this task coming from and what is it?
+
     if (nextTask >= 0) {
         enQ(rq, nextTask, tcb[nextTask].priority);
     }
@@ -252,7 +255,6 @@ static int dispatcher()
 			}
             // signals return 1 sometimes (check when) so the loop will only break if there are signals pending
 			if (signals()) break;
-            // FIXME: this is where it's jumping out
 			longjmp(tcb[curTask].context, 3); 		// restore task context
 		}
 

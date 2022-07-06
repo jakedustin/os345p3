@@ -106,13 +106,6 @@ int P2_listTasks(int argc, char* argv[])
 {
 	int i;
 
-//	?? 1) List all tasks in all queues
-// ?? 2) Show the task stake (new, running, blocked, ready)
-// ?? 3) If blocked, indicate which semaphore
-// TODO: fix exitTask
-// TODO: test ctrl+x (after every 10 seconds, one of the ten tasks should die. Then run sem, the count should increase -9 -> -8 -> -7 ... 0 (no tasks waiting))
-// TODO: running lt in the background should show that the shell is paused on inBufferReady
-// TODO: make sure that sysKillTask kills it in the semaphore
     PQueue combinedKeys = (int*)malloc(MAX_TASKS * sizeof(int));;
     for (i = 0; i < MAX_TASKS; i++) {
         if (tcb[i].name) {
