@@ -1,4 +1,0 @@
-/Users/jdustin/Documents/school/cs-345/os345_cmake/cmake-build-debug/CMakeFiles/os345_cmake.dir
-/Users/jdustin/Documents/school/cs-345/os345_cmake/cmake-build-debug/CMakeFiles/os345_scratch.dir
-/Users/jdustin/Documents/school/cs-345/os345_cmake/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/jdustin/Documents/school/cs-345/os345_cmake/cmake-build-debug/CMakeFiles/rebuild_cache.dir
