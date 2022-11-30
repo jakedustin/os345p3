@@ -1,32 +1,10 @@
-// os345p3.c - Jurassic Park 07/27/2020
-// ***********************************************************************
-// **   DISCLAMER ** DISCLAMER ** DISCLAMER ** DISCLAMER ** DISCLAMER   **
-// **                                                                   **
-// ** The code given here is the basis for the CS345 projects.          **
-// ** It comes "as is" and "unwarranted."  As such, when you use part   **
-// ** or all of the code, it becomes "yours" and you are responsible to **
-// ** understand any algorithm or method presented.  Likewise, any      **
-// ** errors or problems become your responsibility to fix.             **
-// **                                                                   **
-// ** NOTES:                                                            **
-// ** -Comments beginning with "// ??" may require some implementation. **
-// ** -Tab stops are set at every 3 spaces.                             **
-// ** -The function API's in "OS345.h" should not be altered.           **
-// **                                                                   **
-// **   DISCLAMER ** DISCLAMER ** DISCLAMER ** DISCLAMER ** DISCLAMER   **
-// ***********************************************************************
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <setjmp.h>
-#include <time.h>
-#include <assert.h>
-#include "os345.h"
-#include "os345park.h"
-
 // ***********************************************************************
 // project 3 variables
+
+#include <stdlib.h>
+#include <stdio.h>
+#include "os345park.h"
+#include "os345.h"
 
 // Jurassic Park
 extern JPARK myPark;
@@ -94,149 +72,33 @@ extern int P3_tdc(int, char **);
 
 extern void printDeltaClock();
 
-
 // ***********************************************************************
 // ***********************************************************************
 // project3 command
-int P3_main(int argc, char *argv[]) {
+int P3_main(int argc, char* argv[])
+{
     char buf[32];
-    char *newArgv[2];
+    char* newArgv[2];
     parkMutex = NULL;
-    // TEMP
-    myPark.numInCarLine = myPark.numInPark = 4;
 
     // start park
     sprintf(buf, "jurassicPark");
     newArgv[0] = buf;
-    createTask(buf,                         // task name
-               jurassicTask,                // task
-               MED_PRIORITY,                // task priority
-               1,                           // task count
-               newArgv);                    // task argument
+    createTask( buf,				// task name
+                jurassicTask,				// task
+                MED_PRIORITY,				// task priority
+                1,								// task count
+                newArgv);					// task argument
 
     // wait for park to get initialized...
     while (!parkMutex) SWAP;
     printf("\nStart Jurassic Park...");
 
-    // create semaphores
-    // MUTEX CREATION
-    sprintf(buf, "getTicketMutex");
-    getTicketMutex = createSemaphore(buf, BINARY, 1);
-    sprintf(buf, "needDriverMutex");
-    needDriverMutex = createSemaphore(buf, BINARY, 1);
-
     //?? create car, driver, and visitor tasks here
-    for (int carId = 0; carId < NUM_CARS; ++carId) {
-        sprintf(buf, "car[%d]", carId);
-        newArgv[0] = carId;
-        createTask(buf, carTask, MED_PRIORITY, 1, newArgv);
-    }
-
-    for (int driverId = 0; driverId < NUM_DRIVERS; ++driverId) {
-        sprintf(buf, "driver[%d]", driverId);
-        newArgv[0] = driverId;
-        createTask(buf, driverTask, MED_PRIORITY, 1, newArgv);
-    }
-
-    for (int visitorId = 0; visitorId < NUM_VISITORS; ++visitorId) {
-        sprintf(buf, "visitor[%d]", visitorId);
-        newArgv[0] = visitorId;
-        createTask(buf, visitorTask, MED_PRIORITY, 1, newArgv);
-    }
 
     return 0;
 } // end project3
 
-int carTask(int argc, char *argv[]) {
-    int carId = atoi(argv[0]);
-    printf("\nCar task");
-    // main loop
-    while (1) {
-        for (int i = 0; i < 3; ++i) {
-            carIdHolder = carId;
-            SEM_WAIT(fillSeat[carId]);          SWAP;
-            // TODO: get passenger
-            // SEM_SIGNAL(getPassenger);           SWAP;
-            // NOTE: visitor signals that they are in the seat
-            // SEM_WAIT(seatTaken);                SWAP;
-            // NOTE: visitor is waiting on the car to say that the car has seated
-            // SEM_SIGNAL(passengerSeated);        SWAP;
-
-            if (i == 2) {
-                // NOTE: needDriverMutex just prevents other cars from attempting to get a driver and do all this stuff
-                //  at the same time as the given car
-                SEM_WAIT(needDriverMutex);          SWAP;
-                {
-                    SEM_SIGNAL(wakeupDriver);       SWAP;
-//                     TODO: create semaphore and put in mailbox
-//                     driver will check the mailbox and then check the global int to get the car number
-//                     driver will wait on the semaphore until car signals and the handshake is done
-                    SEM_WAIT(driverInCar);         SWAP;
-                    SEM_SIGNAL(goodToGo);          SWAP;
-                }
-                SEM_SIGNAL(needDriverMutex);        SWAP;
-            }
-            SEM_SIGNAL(seatFilled[carId]);          SWAP;
-        }
-
-        SEM_WAIT(rideOver[carId]);              SWAP;
-        // TODO: create driverDone semaphore for driver
-        // driver waits on driver done semaphore
-        // TODO: save driver driverDone semaphore
-        // SEM_SIGNAL(driverDone);
-//        for (int i = 0; i < 3; ++i) {
-//            // TODO: create rideDone semaphore for passengers
-//            // TODO: save passenger rideDone[] semaphore
-//            // SEM_SIGNAL(rideDone[i]);
-//        }
-    }
-    return 0;
-}
-
-int visitorTask(int argc, char* argv[]) {
-    // get in line to buy a ticket
-    // get a ticket
-    // only 1 visitor at a time requests a ticket
-    // getTicketMutex is initialized with 12 tickets
-//    SEM_WAIT(getTicketMutex);		SWAP;
-//    {
-//        // signal need ticket (produce, put hand up)
-//        SEM_SIGNAL(needTicket);		SWAP;
-//
-// NOTE: need to protect this with the needDriverMutex
-
-//        // wakeup a driver (produce)
-//        SEM_SIGNAL(wakeupDriver);	SWAP;
-//
-//        // wait for driver to obtain ticket (consume)
-//        SEM_WAIT(ticketReady);		SWAP;
-//
-//        // put hand down (consume, driver awake, ticket ready)
-//        SEM_WAIT(needTicket);		SWAP;
-//
-//        // buy ticket (produce, signal driver ticket taken)
-//        SEM_SIGNAL(buyTicket);		SWAP;
-//    }
-// // done (produce)
-//    SEM_SIGNAL(getTicketMutex);		SWAP;
-    // visit the museum
-    // take a ride around the park
-    // visit the gift shop
-    // leave the park
-    return 0;
-}
-
-int driverTask(int argc, char* argv[]) {
-    int driverId = atoi(argv[0]);
-    // each driver has a mutex (is available and asleep by default)
-    // loop;
-    // when signaled, check to see if the next thing needed is a driver or a ticket-seller
-    // after performing the duties, go back to sleep
-    char buf[32];
-    sprintf(buf, "driver[%d]-Done", driverId);
-    driverDone = createSemaphore(buf, BINARY, 1);
-    return 0;
-}
 
 // ***********************************************************************
 // ***********************************************************************
@@ -383,5 +245,3 @@ int timeTask(int argc, char *argv[]) {
     }
     return 0;
 } // end timeTask
-
-
