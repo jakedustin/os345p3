@@ -35,7 +35,7 @@ extern TCB tcb[];							// task control block
 extern int curTask;
 extern Semaphore* tics1sec;				// 1 second semaphore
 
-Semaphore* moveCars;
+extern Semaphore* moveCars;
 int makeMove(int car);
 void drawPark(JPARK *park);
 
@@ -609,7 +609,10 @@ void drawPark(JPARK *park)
     // draw park
     CLEAR_SCREEN;																		SWAP;
     printf("\n");																		SWAP;
-    for (i=0; i<25; i++) printf("\n%s", &pk[i][0]);							SWAP;
+    for (i=0; i<25; i++)
+    {
+        printf("\n%s", &pk[i][0]);      SWAP;
+    }
     printf("\n");																		SWAP;
 
     // driver in only one place at a time

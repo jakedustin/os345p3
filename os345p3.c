@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "os345park.h"
 #include "os345.h"
 
@@ -47,6 +48,7 @@ Semaphore *goodToGo;
 Semaphore *needTicket;
 Semaphore *ticketReady;
 Semaphore *buyTicket;
+Semaphore *moveCars;
 
 // ***********************************************************************
 // project 3 functions and tasks
@@ -102,20 +104,18 @@ int P3_main(int argc, char *argv[])
     SWAP;
 
     //?? create car, driver, and visitor tasks here
-    printf("\nCreating car tasks - NUM_CARS = %d", NUM_CARS);
-    fflush(stdout);
     for (int i = 0; i < NUM_CARS; ++i)
     {
-        printf("\nCreating car #%d", i);
-        fflush(stdout);
-        sprintf(buf, "Car #%d", i);
-        printf("\nbuf = %s", buf);
-        fflush(stdout);
-        SWAP;
-        newArgv[0] = i;
-        SWAP;
-        createTask(buf, carTask, MED_PRIORITY, 1, newArgv);
-        SWAP;
+        char *intStr = (char *)malloc(8 * sizeof(char));
+        // put values in strings
+        sprintf(buf, "car[%d]", i);                             SWAP;
+        sprintf(intStr, "%d", i);                               SWAP;
+
+        // move car Id into new argvs
+        strcpy(newArgv[0], intStr);                             SWAP;
+
+        // create car task
+        createTask(buf, carTask, MED_PRIORITY, 1, newArgv);     SWAP;
     }
 
     return 0;
@@ -126,18 +126,19 @@ int P3_main(int argc, char *argv[])
 // ************************************************************************ //
 int carTask(int argc, char *argv[])
 {
-    printf("\nargv[0]: %s", argv[0]);
-    fflush(stdout);
-    // int carId = atoi(argv[0]);
-    // SWAP;
+    // get carId from argvs
+    int carId = atoi(argv[0]);                                  SWAP;
     while (1)
     {
-        printf("\nBeginning of car task while loop");
-        fflush(stdout);
-        SEM_WAIT(rideOver[argc]);
-        printf("\nSignaled rideOver semaphore.");
-        fflush(stdout);
-        SWAP;
+        for (int i = 0; i < 3; ++i) {
+            SEM_WAIT(fillSeat[carId]);                          SWAP;
+            SEM_SIGNAL(seatFilled[carId]);                      SWAP;
+            if (i == 2) {
+                SEM_SIGNAL(moveCars);
+            }
+        }
+        // SEM_SIGNAL()
+        SEM_WAIT(rideOver[carId]);                              SWAP;
     }
 
     return 0;
