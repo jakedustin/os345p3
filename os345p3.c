@@ -130,14 +130,15 @@ int carTask(int argc, char *argv[])
     int carId = atoi(argv[0]);                                  SWAP;
     while (1)
     {
+        // loop through each seat in the car
         for (int i = 0; i < 3; ++i) {
             SEM_WAIT(fillSeat[carId]);                          SWAP;
             SEM_SIGNAL(seatFilled[carId]);                      SWAP;
+            // on the final seat, get a driver and mark the car as ready to go
             if (i == 2) {
                 SEM_SIGNAL(moveCars);
             }
         }
-        // SEM_SIGNAL()
         SEM_WAIT(rideOver[carId]);                              SWAP;
     }
 
