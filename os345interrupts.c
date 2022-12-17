@@ -68,6 +68,7 @@ extern int pollClock;                // current clock()
 extern int lastPollClock;            // last pollClock
 
 extern int superMode;                        // system mode
+extern long swapCount;
 
 
 // **********************************************************************
@@ -188,9 +189,11 @@ static void timer_isr() {
         myOldClkTime = myOldClkTime + ONE_TENTH_SEC;   // update old
         if (deltaClockCount > 0) {
 
+            if (swapCount > 6) {
+            }
             deltaClock[0].time -= 1;
             if (deltaClock[0].time <= 0) {
-                SEM_SIGNAL(deltaClock[0].sem);
+                semSignal(deltaClock[0].sem);
                 popDeltaClock();
             }
         }

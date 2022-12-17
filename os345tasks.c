@@ -165,10 +165,10 @@ static void exitTask(int taskId)
 //
 int sysKillTask(int taskId)
 {
-    printf("\nattempting to kill task %d", taskId);
-    fflush(stdout);
-    printf("\ntcb[taskId].name:\t%s", tcb[taskId].name);
-    fflush(stdout);
+//    printf("\nattempting to kill task %d", taskId);
+//    fflush(stdout);
+//    printf("\ntcb[taskId].name:\t%s", tcb[taskId].name);
+//    fflush(stdout);
     Semaphore *sem = semaphoreList;
     Semaphore **semLink = &semaphoreList;
 

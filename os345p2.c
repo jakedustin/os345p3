@@ -37,6 +37,7 @@ extern TCB tcb[];								// task control block
 extern int curTask;							// current task #
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 extern jmp_buf reset_context;				// context of kernel stack
+extern int P2_listTasks(int, char**);
 
 // ***********************************************************************
 // project 2 functions and tasks
@@ -127,7 +128,7 @@ int P2_listTasks(int argc, char* argv[])
             my_printf("Blocked    %s",
                       tcb[tid].event->name);
         else if (tcb[tid].state == S_EXIT) my_printf("Exiting");
-        swapTask();
+        // swapTask();
     }
 	return 0;
 } // end P2_listTasks

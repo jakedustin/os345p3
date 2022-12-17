@@ -23,6 +23,7 @@
 #include <setjmp.h>
 #include <time.h>
 #include <assert.h>
+#include <execinfo.h>
 
 #include "os345.h"
 
@@ -32,6 +33,11 @@ extern int curTask;							// current task #
 
 extern int superMode;						// system mode
 extern Semaphore* semaphoreList;			// linked list of active semaphores
+
+extern DeltaClock *deltaClock;
+extern int deltaClockCount;
+extern int P2_listTasks(int, char**);
+extern long swapCount;
 
 
 // **********************************************************************
@@ -47,7 +53,19 @@ void semSignal(Semaphore* s)
 {
 	int i;
 	// assert there is a semaphore and it is a legal type
-	assert("semSignal Error" && s && ((s->type == 0) || (s->type == 1)));
+	assert("semSignal Error");
+    if (!s) {
+        void* callstack[128];
+        int frames = backtrace(callstack, 128);
+        char** strs = backtrace_symbols(callstack, frames);
+        for (i = 0; i < frames; ++i) {
+            printf("\n%s", strs[i]);
+        }
+        printf("\n");
+        free(strs);
+        assert(s);
+    }
+    assert((s->type == 0) || (s->type == 1));
 
 	// check semaphore type
 	if (s->type == 0)
